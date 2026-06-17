@@ -25,7 +25,12 @@ export default function UsageChart({ data }) {
         <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={formatDateLabel} />
         <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={32} />
         <Tooltip labelFormatter={formatDateLabel} />
-        <Bar dataKey="count" name="Questions" fill="#0f172a" radius={[4, 4, 0, 0]} />
+        <Bar
+          dataKey="count"
+          name="Questions"
+          fill="var(--color-tghc-navy)"
+          radius={[4, 4, 0, 0]}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

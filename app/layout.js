@@ -1,14 +1,16 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "PDF RAG Chatbot",
-  description: "Ask questions about your uploaded PDFs",
+  title: "TGHC Chatbot",
+  description: "Ask questions about Toronto Grace Health Centre documents",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className="bg-slate-50 text-slate-900 antialiased">{children}</body>
+      <body className="bg-tghc-grey font-sans text-tghc-charcoal antialiased">
+        {children}
+      </body>
     </html>
   );
 }

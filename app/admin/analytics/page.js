@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_SESSION_COOKIE, isValidAdminSessionToken } from "@/lib/admin-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import AppHeader from "@/components/AppHeader";
 import UsageChart from "./UsageChart";
 
 // Always reflect the latest conversations; never statically cache this page.
@@ -137,27 +137,15 @@ export default async function AnalyticsPage() {
   const recentQuestions = rows.slice(0, RECENT_QUESTIONS_LIMIT);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">Analytics</h1>
-          <p className="text-sm text-slate-500">Chatbot usage and engagement</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/admin"
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-          >
-            Documents
-          </Link>
-          <Link
-            href="/"
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-          >
-            Back to chat
-          </Link>
-        </div>
-      </header>
+    <div className="min-h-screen bg-tghc-grey">
+      <AppHeader
+        title="Analytics"
+        subtitle="Chatbot usage and engagement"
+        links={[
+          { href: "/admin", label: "Documents" },
+          { href: "/", label: "Back to chat" },
+        ]}
+      />
 
       <main className="mx-auto max-w-5xl space-y-8 px-4 py-8">
         <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -169,7 +157,7 @@ export default async function AnalyticsPage() {
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold text-slate-900">
+          <h2 className="mb-4 text-sm font-semibold text-tghc-navy">
             Usage over time (last {USAGE_WINDOW_DAYS} days)
           </h2>
           <UsageChart data={usageByDay} />
@@ -177,7 +165,7 @@ export default async function AnalyticsPage() {
 
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-5 py-3">
-            <h2 className="text-sm font-semibold text-slate-900">User breakdown</h2>
+            <h2 className="text-sm font-semibold text-tghc-navy">User breakdown</h2>
           </div>
           {userBreakdown.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-400">No data yet.</p>
@@ -196,7 +184,7 @@ export default async function AnalyticsPage() {
                 <tbody className="divide-y divide-slate-100">
                   {userBreakdown.map((user) => (
                     <tr key={user.userIdentifier}>
-                      <td className="px-5 py-3 font-medium text-slate-900">{user.userName}</td>
+                      <td className="px-5 py-3 font-medium text-tghc-charcoal">{user.userName}</td>
                       <td className="px-5 py-3 text-slate-600">{user.questionCount}</td>
                       <td className="px-5 py-3 text-slate-600">
                         {user.totalTokens.toLocaleString()}
@@ -216,7 +204,7 @@ export default async function AnalyticsPage() {
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold text-slate-900">Token usage</h2>
+          <h2 className="mb-4 text-sm font-semibold text-tghc-navy">Token usage</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <StatCard label="Total prompt tokens" value={totalPromptTokens.toLocaleString()} />
             <StatCard
@@ -233,7 +221,7 @@ export default async function AnalyticsPage() {
 
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-5 py-3">
-            <h2 className="text-sm font-semibold text-slate-900">Document engagement</h2>
+            <h2 className="text-sm font-semibold text-tghc-navy">Document engagement</h2>
           </div>
           {documentEngagement.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-400">No data yet.</p>
@@ -241,7 +229,7 @@ export default async function AnalyticsPage() {
             <ul className="divide-y divide-slate-100">
               {documentEngagement.map((doc) => (
                 <li key={doc.documentId} className="flex items-center justify-between px-5 py-3">
-                  <span className="truncate text-sm font-medium text-slate-900">{doc.name}</span>
+                  <span className="truncate text-sm font-medium text-tghc-charcoal">{doc.name}</span>
                   <span className="whitespace-nowrap text-sm text-slate-500">
                     {doc.count} reference{doc.count === 1 ? "" : "s"}
                   </span>
@@ -253,7 +241,7 @@ export default async function AnalyticsPage() {
 
         <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-5 py-3">
-            <h2 className="text-sm font-semibold text-slate-900">Recent questions</h2>
+            <h2 className="text-sm font-semibold text-tghc-navy">Recent questions</h2>
           </div>
           {recentQuestions.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-400">No data yet.</p>
@@ -262,7 +250,7 @@ export default async function AnalyticsPage() {
               {recentQuestions.map((q) => (
                 <li key={q.id} className="px-5 py-3">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="min-w-0 truncate text-sm text-slate-900">
+                    <p className="min-w-0 truncate text-sm text-tghc-charcoal">
                       {truncate(q.question, QUESTION_TRUNCATE_LENGTH)}
                     </p>
                     <span className="whitespace-nowrap text-xs text-slate-500">
@@ -286,7 +274,7 @@ function StatCard({ label, value }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 text-xl font-semibold text-tghc-navy">{value}</p>
     </div>
   );
 }
