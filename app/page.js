@@ -3,8 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
-function MessageText({ parts }) {
+const MARKDOWN_COMPONENTS = {
+  p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+  ul: ({ node, ...props }) => <ul className="list-disc pl-5" {...props} />,
+  ol: ({ node, ...props }) => <ol className="list-decimal pl-5" {...props} />,
+};
+
+function getMessageText(parts) {
   return parts
     .filter((part) => part.type === "text")
     .map((part) => part.text)
@@ -69,7 +76,13 @@ export default function ChatPage() {
                     : "border border-slate-200 bg-white text-slate-800"
                 }`}
               >
-                <MessageText parts={message.parts} />
+                {message.role === "user" ? (
+                  getMessageText(message.parts)
+                ) : (
+                  <ReactMarkdown components={MARKDOWN_COMPONENTS}>
+                    {getMessageText(message.parts)}
+                  </ReactMarkdown>
+                )}
               </div>
             </div>
           ))}
