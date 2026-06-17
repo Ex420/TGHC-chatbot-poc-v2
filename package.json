@@ -1,0 +1,26 @@
+{
+  "name": "tghc-chatbot-poc-v2",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "16.2.9",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "ai": "6.0.207",
+    "@ai-sdk/openai": "3.0.72",
+    "@ai-sdk/react": "3.0.209",
+    "openai": "6.43.0",
+    "@supabase/supabase-js": "2.108.2",
+    "pdf-parse": "2.4.5"
+  },
+  "devDependencies": {
+    "tailwindcss": "4.3.1",
+    "@tailwindcss/postcss": "4.3.1"
+  }
+}
