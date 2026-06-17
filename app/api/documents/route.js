@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { waitUntil } from "@vercel/functions";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getOpenAIClient, EMBEDDING_MODEL } from "@/lib/openai";
 import { chunkText } from "@/lib/chunk";
@@ -8,6 +9,10 @@ const EMBEDDING_BATCH_SIZE = 100;
 
 // Always hit the database; never statically cache the document list.
 export const dynamic = "force-dynamic";
+// Ingestion keeps running in the background after the response is sent (see
+// waitUntil in POST below); extend the function's lifetime well past the
+// default so extraction + embedding has time to finish for larger PDFs.
+export const maxDuration = 60;
 
 export async function GET() {
   try {
@@ -51,6 +56,13 @@ export async function POST(req) {
   const storagePath = `${documentId}/${file.name}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from("pdfs")
+    .upload(storagePath, buffer, { contentType: "application/pdf" });
+  if (uploadError) {
+    return Response.json({ error: uploadError.message }, { status: 500 });
+  }
+
   const { error: insertError } = await supabaseAdmin.from("documents").insert({
     id: documentId,
     name: file.name,
@@ -61,12 +73,16 @@ export async function POST(req) {
     return Response.json({ error: insertError.message }, { status: 500 });
   }
 
-  try {
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("pdfs")
-      .upload(storagePath, buffer, { contentType: "application/pdf" });
-    if (uploadError) throw new Error(uploadError.message);
+  waitUntil(ingestDocument(supabaseAdmin, documentId, buffer));
 
+  return Response.json({ id: documentId, status: "processing" });
+}
+
+// Runs in the background after POST has already responded (via waitUntil
+// above), so its errors can no longer reach that request -- they only ever
+// surface through the document's `status` column.
+async function ingestDocument(supabaseAdmin, documentId, buffer) {
+  try {
     const markdown = await extractMarkdown(buffer);
     const chunks = chunkText(markdown);
     if (chunks.length === 0) {
@@ -100,13 +116,10 @@ export async function POST(req) {
       .from("documents")
       .update({ status: "ready", chunk_count: rows.length })
       .eq("id", documentId);
-
-    return Response.json({ id: documentId, chunkCount: rows.length });
   } catch (err) {
     await supabaseAdmin
       .from("documents")
       .update({ status: "failed" })
       .eq("id", documentId);
-    return Response.json({ error: err.message }, { status: 500 });
   }
 }

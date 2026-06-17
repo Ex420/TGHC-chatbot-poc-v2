@@ -45,9 +45,27 @@ export default function AdminPage() {
     }
   }, []);
 
+  // Silent refresh (no loading flicker) used while polling for ingestion
+  // status, which finishes in the background after the upload responds.
+  const refreshDocuments = useCallback(async () => {
+    try {
+      const res = await fetch("/api/documents");
+      const data = await res.json();
+      if (res.ok) setDocuments(data.documents ?? []);
+    } catch {
+      // Transient failure -- the next poll will retry.
+    }
+  }, []);
+
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
+
+  useEffect(() => {
+    if (!documents.some((doc) => doc.status === "processing")) return;
+    const interval = setInterval(refreshDocuments, 3000);
+    return () => clearInterval(interval);
+  }, [documents, refreshDocuments]);
 
   async function handleUpload(e) {
     e.preventDefault();
@@ -130,8 +148,7 @@ export default function AdminPage() {
           </div>
           {isUploading && (
             <p className="mt-2 text-xs text-slate-500">
-              Extracting text, chunking, and embedding — this can take a
-              moment for larger PDFs.
+              Uploading file...
             </p>
           )}
           {uploadError && (
