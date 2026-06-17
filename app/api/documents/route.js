@@ -10,9 +10,9 @@ const PDFS_BUCKET = "pdfs";
 // Always hit the database; never statically cache the document list.
 export const dynamic = "force-dynamic";
 // Ingestion keeps running in the background after the response is sent (see
-// waitUntil in POST below); a GPT-4o vision call per page means extraction
-// for a full-length document takes much longer than a typical request.
-export const maxDuration = 300;
+// waitUntil in POST below); extend the function's lifetime well past the
+// default so extraction + embedding has time to finish for larger PDFs.
+export const maxDuration = 60;
 
 export async function GET() {
   try {
