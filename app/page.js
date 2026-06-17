@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import { getUserIdentity } from "@/lib/identity";
 
 const MARKDOWN_COMPONENTS = {
   p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
@@ -33,7 +34,8 @@ export default function ChatPage() {
     e.preventDefault();
     const text = input.trim();
     if (!text || isBusy) return;
-    sendMessage({ text });
+    const { userIdentifier, userName, sessionId } = getUserIdentity();
+    sendMessage({ text }, { body: { userIdentifier, userName, sessionId } });
     setInput("");
   }
 

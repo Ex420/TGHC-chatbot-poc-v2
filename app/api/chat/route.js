@@ -7,7 +7,8 @@ const MATCH_COUNT = 5;
 
 export async function POST(req) {
   try {
-    const { messages } = await req.json();
+    const { messages, userIdentifier, userName, sessionId } = await req.json();
+    const startedAt = Date.now();
 
     const lastMessage = messages[messages.length - 1];
     const query = (lastMessage?.parts ?? [])
@@ -17,6 +18,7 @@ export async function POST(req) {
       .trim();
 
     let context = "";
+    let retrievedChunks = [];
 
     if (query) {
       const embeddingResponse = await getOpenAIClient().embeddings.create({
@@ -33,9 +35,9 @@ export async function POST(req) {
       if (error) {
         console.error("match_chunks error:", error.message);
       } else {
-        const resolvedChunks = Array.isArray(chunks) ? chunks : [];
-        if (resolvedChunks.length) {
-          context = resolvedChunks
+        retrievedChunks = Array.isArray(chunks) ? chunks : [];
+        if (retrievedChunks.length) {
+          context = retrievedChunks
             .map((chunk, i) => `[${i + 1}] ${chunk.content}`)
             .join("\n\n");
         }
@@ -50,6 +52,33 @@ export async function POST(req) {
       model: openai("gpt-4o"),
       system: systemPrompt,
       messages: await convertToModelMessages(messages),
+      onFinish: async ({ text, usage }) => {
+        try {
+          const documentIds = [
+            ...new Set(retrievedChunks.map((c) => c.document_id).filter(Boolean)),
+          ];
+          const chunkIds = retrievedChunks.map((c) => c.id).filter(Boolean);
+
+          await getSupabaseAdmin().from("conversations").insert({
+            user_identifier: userIdentifier ?? null,
+            user_name: userName ?? null,
+            question: query,
+            answer: text,
+            prompt_tokens: usage?.inputTokens ?? null,
+            completion_tokens: usage?.outputTokens ?? null,
+            total_tokens: usage?.totalTokens ?? null,
+            chunks_retrieved: retrievedChunks.length,
+            chunk_ids: chunkIds,
+            response_time_ms: Date.now() - startedAt,
+            question_length: query.length,
+            answer_length: text.length,
+            session_id: sessionId ?? null,
+            document_ids: documentIds,
+          });
+        } catch (logErr) {
+          console.error("Failed to log conversation:", logErr.message);
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

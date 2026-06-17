@@ -115,12 +115,20 @@ export default function AdminDashboard() {
             Upload and manage PDFs used by the chatbot
           </p>
         </div>
-        <Link
-          href="/"
-          className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-        >
-          Back to chat
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/analytics"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Analytics
+          </Link>
+          <Link
+            href="/"
+            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
+          >
+            Back to chat
+          </Link>
+        </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-8">

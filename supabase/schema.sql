@@ -56,7 +56,33 @@ insert into storage.buckets (id, name, public)
 values ('pdfs', 'pdfs', false)
 on conflict (id) do nothing;
 
+-- One row per chat exchange, logged by /api/chat and read by
+-- /admin/analytics. user_identifier/session_id are anonymous IDs generated
+-- client-side (lib/identity.js); there is no user account system.
+create table if not exists conversations (
+  id uuid primary key default gen_random_uuid(),
+  user_identifier text,
+  user_name text,
+  question text not null,
+  answer text not null,
+  prompt_tokens int,
+  completion_tokens int,
+  total_tokens int,
+  chunks_retrieved int,
+  chunk_ids uuid[],
+  response_time_ms int,
+  question_length int,
+  answer_length int,
+  session_id uuid,
+  document_ids uuid[],
+  created_at timestamptz not null default now()
+);
+
+create index if not exists conversations_created_at_idx on conversations (created_at);
+create index if not exists conversations_user_identifier_idx on conversations (user_identifier);
+
 -- RLS on with no policies: only the service role (which bypasses RLS) can
 -- access these tables. The app never uses the anon key for DB access.
 alter table documents enable row level security;
 alter table chunks enable row level security;
+alter table conversations enable row level security;
