@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
-import { PDFParse } from "pdf-parse";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getOpenAIClient, EMBEDDING_MODEL } from "@/lib/openai";
 import { chunkText } from "@/lib/chunk";
+import { extractMarkdown } from "@/lib/pdf";
 
 const EMBEDDING_BATCH_SIZE = 100;
 
@@ -67,11 +67,8 @@ export async function POST(req) {
       .upload(storagePath, buffer, { contentType: "application/pdf" });
     if (uploadError) throw new Error(uploadError.message);
 
-    const parser = new PDFParse({ data: buffer });
-    const parsed = await parser.getText();
-    await parser.destroy();
-
-    const chunks = chunkText(parsed.text);
+    const markdown = await extractMarkdown(buffer);
+    const chunks = chunkText(markdown);
     if (chunks.length === 0) {
       throw new Error("No extractable text found in this PDF");
     }
