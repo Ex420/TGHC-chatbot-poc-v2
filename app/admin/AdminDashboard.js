@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import AppHeader from "@/components/AppHeader";
+import { getSupabaseBrowser } from "@/lib/supabase-browser";
+
+const PDFS_BUCKET = "pdfs";
 
 const STATUS_STYLES = {
   ready: "bg-green-100 text-green-700",
@@ -70,14 +73,28 @@ export default function AdminDashboard() {
   async function handleUpload(e) {
     e.preventDefault();
     if (!file) return;
+    if (file.type !== "application/pdf") {
+      setUploadError("Only PDF files are supported");
+      return;
+    }
     setIsUploading(true);
     setUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      // Upload straight to Storage with the anon key so the file bytes
+      // never pass through our API route -- only the resulting path does.
+      const supabase = getSupabaseBrowser();
+      const documentId = crypto.randomUUID();
+      const storagePath = `${documentId}/${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(PDFS_BUCKET)
+        .upload(storagePath, file, { contentType: "application/pdf" });
+      if (uploadError) throw new Error(uploadError.message);
+
       const res = await fetch("/api/documents", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: documentId, name: file.name, storagePath }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Upload failed");

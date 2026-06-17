@@ -1,18 +1,18 @@
-import { randomUUID } from "crypto";
 import { waitUntil } from "@vercel/functions";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getOpenAIClient, EMBEDDING_MODEL } from "@/lib/openai";
 import { chunkText } from "@/lib/chunk";
-import { extractMarkdown } from "@/lib/pdf";
+import { extractMarkdown, getPageCount, MAX_PDF_PAGES } from "@/lib/pdf";
 
 const EMBEDDING_BATCH_SIZE = 100;
+const PDFS_BUCKET = "pdfs";
 
 // Always hit the database; never statically cache the document list.
 export const dynamic = "force-dynamic";
 // Ingestion keeps running in the background after the response is sent (see
-// waitUntil in POST below); extend the function's lifetime well past the
-// default so extraction + embedding has time to finish for larger PDFs.
-export const maxDuration = 60;
+// waitUntil in POST below); a GPT-4o vision call per page means extraction
+// for a full-length document takes much longer than a typical request.
+export const maxDuration = 300;
 
 export async function GET() {
   try {
@@ -31,6 +31,10 @@ export async function GET() {
   }
 }
 
+// The browser uploads the PDF directly to Supabase Storage (see
+// lib/supabase-browser.js) and only sends us the resulting path -- this
+// route never receives the raw file bytes, so there's no request body size
+// limit to hit no matter how large the PDF is.
 export async function POST(req) {
   let supabaseAdmin;
   try {
@@ -39,33 +43,54 @@ export async function POST(req) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 
-  const formData = await req.formData();
-  const file = formData.get("file");
+  const body = await req.json().catch(() => null);
+  const { id, name, storagePath } = body ?? {};
 
-  if (!file || typeof file === "string") {
-    return Response.json({ error: "No file provided" }, { status: 400 });
+  if (!id || !name || !storagePath) {
+    return Response.json(
+      { error: "Missing id, name, or storagePath" },
+      { status: 400 }
+    );
   }
-  if (file.type !== "application/pdf") {
+  if (!name.toLowerCase().endsWith(".pdf")) {
     return Response.json(
       { error: "Only PDF files are supported" },
       { status: 400 }
     );
   }
 
-  const documentId = randomUUID();
-  const storagePath = `${documentId}/${file.name}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const { data: fileBlob, error: downloadError } = await supabaseAdmin.storage
+    .from(PDFS_BUCKET)
+    .download(storagePath);
+  if (downloadError) {
+    return Response.json({ error: downloadError.message }, { status: 400 });
+  }
+  const buffer = Buffer.from(await fileBlob.arrayBuffer());
 
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from("pdfs")
-    .upload(storagePath, buffer, { contentType: "application/pdf" });
-  if (uploadError) {
-    return Response.json({ error: uploadError.message }, { status: 500 });
+  let pageCount;
+  try {
+    pageCount = await getPageCount(buffer);
+  } catch {
+    await supabaseAdmin.storage.from(PDFS_BUCKET).remove([storagePath]);
+    return Response.json(
+      { error: "Could not read this file. Make sure it's a valid PDF." },
+      { status: 400 }
+    );
+  }
+
+  if (pageCount > MAX_PDF_PAGES) {
+    await supabaseAdmin.storage.from(PDFS_BUCKET).remove([storagePath]);
+    return Response.json(
+      {
+        error: `This PDF has ${pageCount} pages, which exceeds the ${MAX_PDF_PAGES}-page limit. Please split it into smaller documents and upload each part separately.`,
+      },
+      { status: 400 }
+    );
   }
 
   const { error: insertError } = await supabaseAdmin.from("documents").insert({
-    id: documentId,
-    name: file.name,
+    id,
+    name,
     storage_path: storagePath,
     status: "processing",
   });
@@ -73,9 +98,9 @@ export async function POST(req) {
     return Response.json({ error: insertError.message }, { status: 500 });
   }
 
-  waitUntil(ingestDocument(supabaseAdmin, documentId, buffer));
+  waitUntil(ingestDocument(supabaseAdmin, id, buffer));
 
-  return Response.json({ id: documentId, status: "processing" });
+  return Response.json({ id, status: "processing" });
 }
 
 // Runs in the background after POST has already responded (via waitUntil

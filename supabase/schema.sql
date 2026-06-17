@@ -50,11 +50,24 @@ as $$
   limit match_count;
 $$;
 
--- Private bucket for original PDFs; only the server-side service role key
--- (lib/supabase-admin.js) reads or writes here.
-insert into storage.buckets (id, name, public)
-values ('pdfs', 'pdfs', false)
-on conflict (id) do nothing;
+-- Private bucket for original PDFs. The browser uploads directly here with
+-- the anon key (lib/supabase-browser.js) to avoid routing large files
+-- through our API route; the server-side service role key
+-- (lib/supabase-admin.js) is still required to read, list, or delete.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('pdfs', 'pdfs', false, 104857600, array['application/pdf'])
+on conflict (id) do update set
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Lets the browser's anon-key client upload new PDFs directly to Storage.
+-- Scoped to insert only, so the anon key still can't read, list, or delete
+-- existing objects -- those stay limited to the service role.
+drop policy if exists "Anon can upload pdfs" on storage.objects;
+create policy "Anon can upload pdfs"
+  on storage.objects for insert
+  to anon
+  with check (bucket_id = 'pdfs');
 
 -- One row per chat exchange, logged by /api/chat and read by
 -- /admin/analytics. user_identifier/session_id are anonymous IDs generated

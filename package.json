@@ -16,11 +16,12 @@
     "ai": "6.0.207",
     "next": "16.2.9",
     "openai": "6.43.0",
+    "pdf-lib": "^1.17.1",
+    "pdf2pic": "^3.2.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-markdown": "10.1.0",
-    "recharts": "3.8.1",
-    "unpdf": "1.6.2"
+    "recharts": "3.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.1",
