@@ -32,10 +32,13 @@ export async function POST(req) {
 
       if (error) {
         console.error("match_chunks error:", error.message);
-      } else if (chunks?.length) {
-        context = chunks
-          .map((chunk, i) => `[${i + 1}] ${chunk.content}`)
-          .join("\n\n");
+      } else {
+        const resolvedChunks = Array.isArray(chunks) ? chunks : [];
+        if (resolvedChunks.length) {
+          context = resolvedChunks
+            .map((chunk, i) => `[${i + 1}] ${chunk.content}`)
+            .join("\n\n");
+        }
       }
     }
 
