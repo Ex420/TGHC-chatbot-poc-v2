@@ -38,7 +38,10 @@ export async function POST(req) {
         retrievedChunks = Array.isArray(chunks) ? chunks : [];
         if (retrievedChunks.length) {
           context = retrievedChunks
-            .map((chunk, i) => `[${i + 1}] ${chunk.content}`)
+            .map((chunk, i) => {
+              const label = chunk.heading ? `${chunk.heading}: ` : "";
+              return `[${i + 1}] ${label}${chunk.content}`;
+            })
             .join("\n\n");
         }
       }

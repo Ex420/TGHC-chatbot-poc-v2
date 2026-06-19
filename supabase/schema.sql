@@ -23,6 +23,11 @@ create table if not exists chunks (
   created_at timestamptz not null default now()
 );
 
+-- Heading the chunk's content was grouped under (set by the structure-aware
+-- chunker in lib/chunk.js), so search results can show it as a source
+-- reference. Null for chunks with no detected heading.
+alter table chunks add column if not exists heading text;
+
 create index if not exists chunks_document_id_idx on chunks (document_id);
 create index if not exists chunks_embedding_idx
   on chunks using hnsw (embedding vector_cosine_ops);
@@ -35,6 +40,7 @@ create or replace function match_chunks (
 returns table (
   id uuid,
   document_id uuid,
+  heading text,
   content text,
   similarity float
 )
@@ -43,6 +49,7 @@ as $$
   select
     chunks.id,
     chunks.document_id,
+    chunks.heading,
     chunks.content,
     1 - (chunks.embedding <=> query_embedding) as similarity
   from chunks

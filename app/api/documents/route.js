@@ -120,14 +120,15 @@ async function ingestDocument(supabaseAdmin, documentId, buffer) {
       const batch = chunks.slice(i, i + EMBEDDING_BATCH_SIZE);
       const response = await openaiClient.embeddings.create({
         model: EMBEDDING_MODEL,
-        input: batch,
+        input: batch.map((chunk) => chunk.content),
       });
       embeddings.push(...response.data.map((d) => d.embedding));
     }
 
-    const rows = chunks.map((content, index) => ({
+    const rows = chunks.map(({ heading, content }, index) => ({
       document_id: documentId,
       chunk_index: index,
+      heading,
       content,
       embedding: embeddings[index],
     }));
